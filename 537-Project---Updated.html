@@ -1400,7 +1400,7 @@ kable(univariate_dfs[, c(&quot;term&quot;, &quot;estimate&quot;, &quot;conf.low&
 </tbody>
 </table>
 <pre class="r"><code>## multivariable Cox for dfs
-cox_dfs_adj &lt;- coxph(dfs_surv ~ deltap + age + as.factor(hospital) + male, data = bmt)
+cox_dfs_adj &lt;- coxph(dfs_surv ~ deltap + age + as.factor(hospital) + as.factor(disgroup) + male, data = bmt)
 multi_dfs &lt;- tidy(cox_dfs_adj, conf.int = T, exponentiate = T)
 
 kable(multi_dfs[, c(&quot;term&quot;, &quot;estimate&quot;, &quot;conf.low&quot;, &quot;conf.high&quot;, &quot;p.value&quot;)], 
@@ -1419,45 +1419,59 @@ kable(multi_dfs[, c(&quot;term&quot;, &quot;estimate&quot;, &quot;conf.low&quot;
 <tbody>
 <tr class="odd">
 <td align="left">deltap</td>
-<td align="right">0.242</td>
-<td align="right">0.129</td>
-<td align="right">0.453</td>
+<td align="right">0.256</td>
+<td align="right">0.138</td>
+<td align="right">0.476</td>
 <td align="right">0.000</td>
 </tr>
 <tr class="even">
 <td align="left">age</td>
-<td align="right">1.018</td>
-<td align="right">0.994</td>
-<td align="right">1.043</td>
-<td align="right">0.149</td>
+<td align="right">1.017</td>
+<td align="right">0.992</td>
+<td align="right">1.044</td>
+<td align="right">0.189</td>
 </tr>
 <tr class="odd">
 <td align="left">as.factor(hospital)2</td>
-<td align="right">1.295</td>
-<td align="right">0.653</td>
-<td align="right">2.568</td>
-<td align="right">0.459</td>
+<td align="right">1.347</td>
+<td align="right">0.662</td>
+<td align="right">2.739</td>
+<td align="right">0.411</td>
 </tr>
 <tr class="even">
 <td align="left">as.factor(hospital)3</td>
-<td align="right">0.870</td>
-<td align="right">0.461</td>
-<td align="right">1.642</td>
-<td align="right">0.667</td>
+<td align="right">0.869</td>
+<td align="right">0.453</td>
+<td align="right">1.667</td>
+<td align="right">0.672</td>
 </tr>
 <tr class="odd">
 <td align="left">as.factor(hospital)4</td>
-<td align="right">0.415</td>
-<td align="right">0.183</td>
-<td align="right">0.941</td>
-<td align="right">0.035</td>
+<td align="right">0.477</td>
+<td align="right">0.206</td>
+<td align="right">1.102</td>
+<td align="right">0.083</td>
+</tr>
+<tr class="even">
+<td align="left">as.factor(disgroup)2</td>
+<td align="right">0.702</td>
+<td align="right">0.375</td>
+<td align="right">1.312</td>
+<td align="right">0.267</td>
+</tr>
+<tr class="odd">
+<td align="left">as.factor(disgroup)3</td>
+<td align="right">1.496</td>
+<td align="right">0.835</td>
+<td align="right">2.680</td>
+<td align="right">0.176</td>
 </tr>
 <tr class="even">
 <td align="left">male</td>
-<td align="right">0.924</td>
-<td align="right">0.581</td>
-<td align="right">1.470</td>
-<td align="right">0.739</td>
+<td align="right">0.928</td>
+<td align="right">0.580</td>
+<td align="right">1.484</td>
+<td align="right">0.756</td>
 </tr>
 </tbody>
 </table>
@@ -1489,8 +1503,8 @@ kable(univariate_relapse[, c(&quot;term&quot;, &quot;estimate&quot;, &quot;conf.
 </tbody>
 </table>
 <pre class="r"><code>## multivariable Cox for relapse
-cox_relapse_adj &lt;- coxph(relapse_surv ~ deltap + age + as.factor(hospital) + male, data = bmt)
-multi_relapse &lt;- tidy(cox_dfs_adj, conf.int = T, exponentiate = T)
+cox_relapse_adj &lt;- coxph(relapse_surv ~ deltap + age + as.factor(hospital) + + as.factor(disgroup)+ male, data = bmt)
+multi_relapse &lt;- tidy(cox_relapse_adj, conf.int = T, exponentiate = T)
 
 kable(multi_relapse[, c(&quot;term&quot;, &quot;estimate&quot;, &quot;conf.low&quot;, &quot;conf.high&quot;, &quot;p.value&quot;)], 
       digits = 3, caption = &quot;Multivariable Cox: Platelet Recovery and DFS&quot;)</code></pre>
@@ -1508,45 +1522,59 @@ kable(multi_relapse[, c(&quot;term&quot;, &quot;estimate&quot;, &quot;conf.low&q
 <tbody>
 <tr class="odd">
 <td align="left">deltap</td>
-<td align="right">0.242</td>
-<td align="right">0.129</td>
-<td align="right">0.453</td>
-<td align="right">0.000</td>
+<td align="right">0.895</td>
+<td align="right">0.256</td>
+<td align="right">3.134</td>
+<td align="right">0.863</td>
 </tr>
 <tr class="even">
 <td align="left">age</td>
-<td align="right">1.018</td>
-<td align="right">0.994</td>
-<td align="right">1.043</td>
-<td align="right">0.149</td>
+<td align="right">0.998</td>
+<td align="right">0.960</td>
+<td align="right">1.038</td>
+<td align="right">0.937</td>
 </tr>
 <tr class="odd">
 <td align="left">as.factor(hospital)2</td>
-<td align="right">1.295</td>
-<td align="right">0.653</td>
-<td align="right">2.568</td>
-<td align="right">0.459</td>
+<td align="right">1.100</td>
+<td align="right">0.359</td>
+<td align="right">3.374</td>
+<td align="right">0.868</td>
 </tr>
 <tr class="even">
 <td align="left">as.factor(hospital)3</td>
-<td align="right">0.870</td>
-<td align="right">0.461</td>
-<td align="right">1.642</td>
-<td align="right">0.667</td>
+<td align="right">1.324</td>
+<td align="right">0.575</td>
+<td align="right">3.051</td>
+<td align="right">0.509</td>
 </tr>
 <tr class="odd">
 <td align="left">as.factor(hospital)4</td>
+<td align="right">0.783</td>
+<td align="right">0.274</td>
+<td align="right">2.241</td>
+<td align="right">0.649</td>
+</tr>
+<tr class="even">
+<td align="left">as.factor(disgroup)2</td>
 <td align="right">0.415</td>
-<td align="right">0.183</td>
-<td align="right">0.941</td>
-<td align="right">0.035</td>
+<td align="right">0.163</td>
+<td align="right">1.057</td>
+<td align="right">0.065</td>
+</tr>
+<tr class="odd">
+<td align="left">as.factor(disgroup)3</td>
+<td align="right">1.836</td>
+<td align="right">0.821</td>
+<td align="right">4.106</td>
+<td align="right">0.139</td>
 </tr>
 <tr class="even">
 <td align="left">male</td>
-<td align="right">0.924</td>
-<td align="right">0.581</td>
-<td align="right">1.470</td>
-<td align="right">0.739</td>
+<td align="right">0.637</td>
+<td align="right">0.335</td>
+<td align="right">1.213</td>
+<td align="right">0.170</td>
 </tr>
 </tbody>
 </table>
