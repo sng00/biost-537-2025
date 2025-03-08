@@ -18,8 +18,10 @@ library(ggplot2)
 library(dplyr)
 library(knitr)
 library(broom)
+library(table1)
 
-bmt <- read.csv("~/Documents/UW classes/survival analysis/bmt.csv")
+#bmt <- read.csv("~/Documents/UW classes/survival analysis/bmt.csv")
+bmt <- read.csv("~/Downloads/bmt.csv")
 
 dfs_surv <- Surv(time = bmt$tdfs, event = bmt$deltadfs)
 km_fit <- survfit(dfs_surv ~ 1)
@@ -27,10 +29,10 @@ km_fit <- survfit(dfs_surv ~ 1)
 survminer::ggsurvplot(
     fit = km_fit,
     data = bmt,
-    conf.int = TRUE,
+    conf.int = T,
     xlab = "Time (days)",
     ylab = "Disease-Free Survival Probability",
-    title = "Kaplan-Meier Curve for Disease-Free Survival"
+    title = "Kaplan-Meier Curve for Disease-Free Survival of All Participants"
 )
 
 summary(km_fit)
@@ -106,6 +108,73 @@ fisher.test(table_hospital_fab)
 table_mtx_fab <- table(bmt$mtx, bmt$fab)
 chisq.test(table_mtx_fab)
 
+# table 1
+bmt <- bmt %>%
+  mutate(disgroupCat = factor(disgroup,
+                              levels = c(1, 2, 3),
+                              labels = c("All", "Low Risk AML", "High Risk AML")),
+         maleCat = factor(male,
+                          levels = c(0, 1),
+                          labels = c("Female", "Male")),
+         cmvCat = factor(cmv,
+                         levels = c(0, 1),
+                         labels = c("CMV Negative", "CMV Positive")),
+         donormaleCat = factor(donormale,
+                               levels = c(0, 1),
+                               labels = c("Female Donor", "Male Donor")),
+         donorcmvCat = factor(donorcmv,
+                              levels = c(0, 1),
+                              labels = c("CMV Negative Donor", "CMV Positive Donor")),
+         fabCat = factor(fab,
+                         levels = c(0, 1),
+                         labels = c("Otherwise", "FAB Grade 4 or 5 and AML")),
+         hospitalCat = factor(hospital,
+                              levels = c(1, 2, 3, 4),
+                              labels = c("OSU", "Alfred", "St. Vincent", "Hahnemann")),
+         mtxCat = factor(mtx,
+                         levels = c(0, 1),
+                         labels = c("No", "Yes")),
+         deltasCat = factor(deltas,
+                            levels = c(0, 1),
+                            labels = c("Alive", "Dead")),
+         deltarCat = factor(deltar,
+                            levels = c(0,1),
+                            labels = c("Disease-free", "Relapse")),
+         deltadfsCat = factor(deltadfs,
+                            levels = c(0,1),
+                            labels = c("Alive and Disease-free", "Dead or Relapsed")),
+         deltaaCat = factor(deltaa,
+                            levels = c(0,1),
+                            labels = c("No aGVHD", "aGVHD")),
+         deltapCat = factor(deltap,
+                            levels = c(0,1),
+                            labels = c("Not Recovered", "Recovered")))
+
+label(bmt$deltarCat) <- "Replase"
+label(bmt$deltasCat) <- "Death"
+label(bmt$deltadfsCat) <- "Disease-free Survival"
+label(bmt$deltaaCat) <- "aGVHD"
+label(bmt$deltapCat) <- "Recovery of Normal Platelet Levels"
+label(bmt$age) <- "Patient Age"
+label(bmt$maleCat) <- "Patient Sex"
+label(bmt$cmvCat) <- "Patient CMV Status"
+label(bmt$donorage) <- "Donor Age"
+label(bmt$donormaleCat) <- "Donor Sex"
+label(bmt$donorcmvCat) <- "Donor CMV Status"
+label(bmt$waittime) <- "Wait Time until Transplant (Days)"
+label(bmt$fabCat) <- "Disease Subtype"
+label(bmt$hospitalCat) <- "Recruitment Center"
+label(bmt$mtxCat) <- "Prophylactic Methotrexate Use"
+
+disgroup_tab1 <- table1(~ deltarCat + deltadfsCat + deltaaCat + deltasCat + deltapCat + age + donorage + waittime + maleCat + cmvCat + hospitalCat + mtxCat | disgroupCat, 
+                        data = bmt,
+                        caption = "Baseline Descriptive Statistics by Disease Group")
+disgroup_tab1
+
+fab_tab1 <- table1(~ deltarCat + deltadfsCat + deltaaCat + deltasCat + deltapCat + age + donorage + waittime + maleCat + cmvCat + hospitalCat + mtxCat | fabCat, 
+                   data = bmt,
+                   caption = "Baseline Descriptive Statistics by FAB Classification")
+fab_tab1
 ```
 
 # 3. Are any of the measured baseline variables associated with differences in disease-free survival?
