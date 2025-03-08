@@ -1262,7 +1262,7 @@ Risk</caption>
 </tbody>
 </table>
 <pre class="r"><code>## multivariable Cox w/ confounders
-cox_adj &lt;- coxph(agvhd_surv ~ mtx + age + male + cmv + as.factor(disgroup) + waittime + as.factor(hospital), data = bmt)
+cox_adj &lt;- coxph(agvhd_surv ~ mtx + age + male + as.factor(disgroup) + waittime + as.factor(hospital), data = bmt)
 multivariable_mtx &lt;- tidy(cox_adj, conf.int = TRUE, exponentiate=TRUE)
 
 kable(multivariable_mtx[, c(&quot;term&quot;, &quot;estimate&quot;, &quot;conf.low&quot;, &quot;conf.high&quot;, &quot;p.value&quot;)], 
@@ -1283,72 +1283,65 @@ Risk</caption>
 <tr class="odd">
 <td align="left">mtx</td>
 <td align="right">0.470</td>
-<td align="right">0.130</td>
-<td align="right">1.696</td>
-<td align="right">0.249</td>
+<td align="right">0.131</td>
+<td align="right">1.682</td>
+<td align="right">0.246</td>
 </tr>
 <tr class="even">
 <td align="left">age</td>
 <td align="right">1.074</td>
-<td align="right">1.026</td>
+<td align="right">1.027</td>
 <td align="right">1.123</td>
 <td align="right">0.002</td>
 </tr>
 <tr class="odd">
 <td align="left">male</td>
 <td align="right">0.882</td>
-<td align="right">0.389</td>
-<td align="right">1.999</td>
+<td align="right">0.390</td>
+<td align="right">1.996</td>
 <td align="right">0.764</td>
 </tr>
 <tr class="even">
-<td align="left">cmv</td>
-<td align="right">1.000</td>
-<td align="right">0.426</td>
-<td align="right">2.347</td>
-<td align="right">0.999</td>
-</tr>
-<tr class="odd">
 <td align="left">as.factor(disgroup)2</td>
 <td align="right">0.528</td>
-<td align="right">0.176</td>
-<td align="right">1.582</td>
+<td align="right">0.177</td>
+<td align="right">1.580</td>
 <td align="right">0.254</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left">as.factor(disgroup)3</td>
 <td align="right">0.303</td>
-<td align="right">0.091</td>
-<td align="right">1.006</td>
-<td align="right">0.051</td>
+<td align="right">0.093</td>
+<td align="right">0.986</td>
+<td align="right">0.047</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left">waittime</td>
 <td align="right">1.000</td>
 <td align="right">0.999</td>
 <td align="right">1.001</td>
 <td align="right">0.470</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left">as.factor(hospital)2</td>
 <td align="right">1.632</td>
-<td align="right">0.311</td>
-<td align="right">8.554</td>
-<td align="right">0.562</td>
+<td align="right">0.316</td>
+<td align="right">8.417</td>
+<td align="right">0.558</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left">as.factor(hospital)3</td>
 <td align="right">NA</td>
 <td align="right">NA</td>
 <td align="right">NA</td>
 <td align="right">NA</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left">as.factor(hospital)4</td>
 <td align="right">1.606</td>
-<td align="right">0.559</td>
-<td align="right">4.619</td>
-<td align="right">0.379</td>
+<td align="right">0.563</td>
+<td align="right">4.586</td>
+<td align="right">0.376</td>
 </tr>
 </tbody>
 </table>
