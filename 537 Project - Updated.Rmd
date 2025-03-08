@@ -1,0 +1,291 @@
+---
+title: "BIOST/EPI 537 Final Group Project"
+author: "Geyue Li, Cecilia Martindale, Sarah Garcia"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1. Provide an estimate of disease-free survival time for patients enrolled in this study. What are the main characteristics of this summary?
+
+```{r}
+library(survival)
+library(survminer)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+library(broom)
+
+bmt <- read.csv("~/Documents/UW classes/survival analysis/bmt.csv")
+
+dfs_surv <- Surv(time = bmt$tdfs, event = bmt$deltadfs)
+km_fit <- survfit(dfs_surv ~ 1)
+
+survminer::ggsurvplot(
+    fit = km_fit,
+    data = bmt,
+    conf.int = TRUE,
+    xlab = "Time (days)",
+    ylab = "Disease-Free Survival Probability",
+    title = "Kaplan-Meier Curve for Disease-Free Survival"
+)
+
+summary(km_fit)
+```
+
+# 2. How do patients in different disease groups or in different FAB classifications compare to each other with respect to other available baseline measurements?
+
+```{r}
+baseline_vars <- c("age",  "donorage", "waittime")
+cat_vars <- c("male","cmv", "donormale", "donorcmv", "mtx")
+# do hospital on its own since it is 4 categories
+
+group_summary <- bmt %>%
+  group_by(disgroup) %>%
+  summarise(n = n(), across(all_of(baseline_vars), list(mean = mean, sd = sd, median = median), na.rm = TRUE), 
+            across(all_of(cat_vars), ~ mean(. == 1, na.rm = TRUE) * 100, .names = "percent_{.col}"),
+            percent_Ohio=mean(hospital == 1, na.rm = TRUE) * 100,
+            percent_Melbourne=mean(hospital == 2, na.rm = TRUE) * 100,
+            percent_Sydney=mean(hospital == 3, na.rm = TRUE) * 100,
+            percent_Philadelphia=mean(hospital == 4, na.rm = TRUE) * 100) %>% 
+  mutate(disgroup=case_when(disgroup==1 ~ "ALL",
+                            disgroup==2 ~ "Low risk AML",
+                            disgroup==3 ~ "High risk AML"))
+
+kable(group_summary, caption = "Baseline Summary by Disease Group (disgroup)")
+
+# Continuous variables - ANOVA or Kruskal-Wallis
+kruskal.test(age ~ disgroup, data = bmt)
+kruskal.test(donorage ~ disgroup, data = bmt)
+kruskal.test(waittime ~ disgroup, data = bmt)
+
+# Categorical variables - Chi-square test
+table_male <- table(bmt$male, bmt$disgroup)
+chisq.test(table_male)
+
+table_cmv <- table(bmt$cmv, bmt$disgroup)
+chisq.test(table_cmv)
+
+table_hospital <- table(bmt$hospital, bmt$disgroup)
+fisher.test(table_hospital)
+
+table_mtx <- table(bmt$mtx, bmt$disgroup)
+chisq.test(table_mtx)
+
+fab_summary <- bmt %>%
+  group_by(fab) %>%
+  summarise(n = n(), across(all_of(baseline_vars), list(mean = mean, sd = sd, median = median), na.rm = TRUE),
+            across(all_of(cat_vars), ~ mean(. == 1, na.rm = TRUE) * 100, .names = "percent_{.col}"),
+            percent_Ohio=mean(hospital == 1, na.rm = TRUE) * 100,
+            percent_Melbourne=mean(hospital == 2, na.rm = TRUE) * 100,
+            percent_Sydney=mean(hospital == 3, na.rm = TRUE) * 100,
+            percent_Philadelphia=mean(hospital == 4, na.rm = TRUE) * 100) %>%
+  mutate(fab=case_when(fab==0 ~ "Otherwise",
+                            fab==1 ~ "FAB Grade 4 or 5 & AML"))
+
+kable(fab_summary, caption = "Baseline Summary by FAB Classification (fab)")
+
+# Continuous variables - Wilcoxon test (since fab only has 2 levels)
+wilcox.test(age ~ fab, data = bmt)
+wilcox.test(donorage ~ fab, data = bmt)
+wilcox.test(waittime ~ fab, data = bmt)
+
+# Categorical variables - Chi-square test
+table_male_fab <- table(bmt$male, bmt$fab)
+chisq.test(table_male_fab)
+
+table_cmv_fab <- table(bmt$cmv, bmt$fab)
+chisq.test(table_cmv_fab)
+
+table_hospital_fab <- table(bmt$hospital, bmt$fab)
+fisher.test(table_hospital_fab)
+
+table_mtx_fab <- table(bmt$mtx, bmt$fab)
+chisq.test(table_mtx_fab)
+
+```
+
+# 3. Are any of the measured baseline variables associated with differences in disease-free survival?
+
+```{r}
+baseline_vars <- c("age", "male", "cmv", "as.factor(disgroup)", 
+                   "donorage", "donormale", "donorcmv", 
+                   "waittime", "as.factor(hospital)", "mtx")
+
+univariate_results <- lapply(baseline_vars, function(var) {
+    formula <- as.formula(paste("dfs_surv ~", var))
+    cox_model <- coxph(formula, data = bmt)
+    result <- tidy(cox_model, conf.int = TRUE, exponentiate=TRUE)  # Ensure confidence intervals are included
+    result$variable <- var
+    return(result)
+})
+
+univariate_results <- do.call(rbind, univariate_results)
+
+colnames(univariate_results)
+
+univariate_results <- univariate_results[, c("variable", "term", "estimate", "conf.low", "conf.high", "p.value")]
+
+kable(univariate_results, digits = 3, caption = "Univariate Cox Regression Results for Disease-Free Survival")
+
+```
+
+# 4. It is generally thought that aGVHD has an anti-leukemic effect. Based on the available data, is occurrence of aGVHD after transplantation associated with improved disease-free survival? Is it associated with a decreased risk of relapse? In view of this, do you consider aGVHD as an important prognostic event?
+
+```{r}
+dfs_surv <- Surv(time = bmt$tdfs, event = bmt$deltadfs)
+
+relapse_surv <- Surv(time = bmt$tdfs, event = bmt$deltar)
+
+## univariate Cox for disease-free survival
+cox_dfs_unadj <- coxph(dfs_surv ~ deltaa + age + as.factor(hospital) + male, data = bmt)
+dfs_summary <- tidy(cox_dfs_unadj, conf.int = TRUE, exponentiate = TRUE)
+dfs_summary
+
+km_dfs <- survfit(dfs_surv ~ deltaa, data = bmt)
+
+ggsurvplot(km_dfs, conf.int = TRUE, pval = TRUE,
+           xlab = "Time (days)", 
+           ylab = "Disease-Free Survival Probability",
+           legend.labs = c("No aGVHD", "aGVHD"),
+           title = "DFS by aGVHD Status")
+
+## multivariable Cox for dfs
+cox_dfs_adj <- coxph(dfs_surv ~ deltaa + age + as.factor(hospital) + male, data = bmt)
+dfs_summary_adj <- tidy(cox_dfs_adj, conf.int = T, exponentiate = T)
+dfs_summary_adj
+
+## univariate Cox for relapse
+cox_relapse_unadj <- coxph(relapse_surv ~ deltaa, data = bmt)
+relapse_summary <- tidy(cox_relapse_unadj, conf.int = TRUE, exponentiate=TRUE)
+relapse_summary
+
+km_relapse <- survfit(relapse_surv ~ deltaa, data = bmt)
+
+ggsurvplot(km_relapse, conf.int = TRUE, pval = TRUE,
+           xlab = "Time (days)", 
+           ylab = "Cumulative Relapse Probability",
+           legend.labs = c("No aGVHD", "aGVHD"),
+           title = "Relapse by aGVHD Status")
+
+## multivariable Cox for relapse
+cox_relapse_adj <- coxph(relapse_surv ~ deltaa + age + as.factor(hospital) + male, data = bmt)
+relapse_summary_adj <- tidy(cox_relapse_adj, conf.int = T, exponentiate = T)
+relapse_summary_adj
+```
+
+
+# 5. Among the patients who develop aGVHD, are any of the measured baseline factors associated with differences in disease-free survival?
+
+```{r}
+bmt_agvhd <- subset(bmt, deltaa == 1)
+
+dfs_surv_agvhd <- Surv(time = bmt_agvhd$tdfs, event = bmt_agvhd$deltadfs)
+
+baseline_vars <- c("age", "male", "cmv", "as.factor(disgroup)", 
+                   "donorage", "donormale", "donorcmv", 
+                   "waittime", "as.factor(hospital)", "mtx")
+
+uni_agvhd <- lapply(baseline_vars, function(var) {
+    formula <- as.formula(paste("dfs_surv_agvhd ~", var))
+    cox_model <- coxph(formula, data = bmt_agvhd)
+    result <- tidy(cox_model, conf.int = TRUE, exponentiate=TRUE)
+    result$variable <- var
+    return(result)
+})
+
+uni_agvhd <- do.call(rbind, uni_agvhd)
+
+uni_agvhd <- uni_agvhd[, c("variable", "term", "estimate", "conf.low", "conf.high", "p.value")]
+kable(uni_agvhd, digits = 3, caption = "Univariate Cox Regression Results for DFS (aGVHD Patients Only)")
+
+```
+
+# 6. Is prophylactic use of methotrexate associated with an increased or decreased risk of developing aGVHD? Provide an estimate of the survival function of time from transplant until onset of aGVHD separately for patients either administered methotrexate or not. In doing so, consider the importance of accounting for relevant confounding factors.
+
+```{r}
+agvhd_surv <- Surv(time = bmt$ta, event = bmt$deltaa)
+
+## unadjusted KM
+km_agvhd <- survfit(agvhd_surv ~ mtx, data = bmt)
+
+ggsurvplot(km_agvhd, conf.int = TRUE, pval = TRUE,
+           xlab = "Time to aGVHD (days)",
+           ylab = "Cumulative Incidence of aGVHD",
+           legend.labs = c("No Methotrexate", "Methotrexate"),
+           title = "Time to aGVHD by Methotrexate Use")
+
+## univariate Cox
+cox_mtx <- coxph(agvhd_surv ~ mtx, data = bmt)
+univariate_mtx <- tidy(cox_mtx, conf.int = TRUE, exponentiate=TRUE)
+
+kable(univariate_mtx[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
+      digits = 3, caption = "Univariate Cox Regression: Methotrexate and aGVHD Risk")
+
+## multivariable Cox w/ confounders
+cox_adj <- coxph(agvhd_surv ~ mtx + age + male + cmv + as.factor(disgroup) + waittime + as.factor(hospital), data = bmt)
+multivariable_mtx <- tidy(cox_adj, conf.int = TRUE, exponentiate=TRUE)
+
+kable(multivariable_mtx[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
+      digits = 3, caption = "Multivariable Cox Regression: Methotrexate and aGVHD Risk")
+
+
+```
+
+# 7. Based on the available data, is recovery of normal platelet levels associated with improved disease- free survival? Is it associated with a decreased risk of relapse?
+
+```{r}
+dfs_surv <- Surv(time = bmt$tdfs, event = bmt$deltadfs)
+
+relapse_surv <- Surv(time = bmt$tdfs, event = bmt$deltar)
+
+## KM for dfs
+km_dfs <- survfit(dfs_surv ~ deltap, data = bmt)
+
+ggsurvplot(km_dfs, conf.int = TRUE, pval = TRUE,
+           xlab = "Time (days)",
+           ylab = "Disease-Free Survival Probability",
+           legend.labs = c("No Platelet Recovery", "Platelet Recovery"),
+           title = "DFS by Platelet Recovery")
+
+## KM for relapse
+km_relapse <- survfit(relapse_surv ~ deltap, data = bmt)
+
+ggsurvplot(km_relapse, conf.int = TRUE, pval = TRUE,
+           xlab = "Time (days)",
+           ylab = "Cumulative Relapse Probability",
+           legend.labs = c("No Platelet Recovery", "Platelet Recovery"),
+           title = "Relapse by Platelet Recovery")
+
+## univariate Cox for dfs
+cox_dfs <- coxph(dfs_surv ~ deltap, data = bmt)
+univariate_dfs <- tidy(cox_dfs, conf.int = TRUE, exponentiate=TRUE)
+
+kable(univariate_dfs[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
+      digits = 3, caption = "Univariate Cox: Platelet Recovery and DFS")
+
+## multivariable Cox for dfs
+cox_dfs_adj <- coxph(dfs_surv ~ deltap + age + as.factor(hospital) + male, data = bmt)
+multi_dfs <- tidy(cox_dfs_adj, conf.int = T, exponentiate = T)
+
+kable(multi_dfs[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
+      digits = 3, caption = "Multivariable Cox: Platelet Recovery and DFS")
+
+## univariate Cox for relapse
+cox_relapse <- coxph(relapse_surv ~ deltap, data = bmt)
+univariate_relapse <- tidy(cox_relapse, conf.int = TRUE)
+
+kable(univariate_relapse[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
+      digits = 3, caption = "Univariate Cox: Platelet Recovery and Relapse Risk")
+
+## multivariable Cox for relapse
+cox_relapse_adj <- coxph(relapse_surv ~ deltap + age + as.factor(hospital) + male, data = bmt)
+multi_relapse <- tidy(cox_dfs_adj, conf.int = T, exponentiate = T)
+
+kable(multi_relapse[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
+      digits = 3, caption = "Multivariable Cox: Platelet Recovery and DFS")
+
+```
