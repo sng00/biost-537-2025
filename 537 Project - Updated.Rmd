@@ -36,6 +36,7 @@ survminer::ggsurvplot(
     fit = km_fit,
     data = bmt,
     conf.int = T,
+    palette = "navy",
     xlab = "Time (days)",
     ylab = "Disease-Free Survival Probability",
     title = "Kaplan-Meier Curve for Disease-Free Survival of All Participants"
@@ -189,9 +190,9 @@ fab_tab1
 # 3. Are any of the measured baseline variables associated with differences in disease-free survival?
 
 ```{r}
-baseline_vars <- c("age", "male", "cmv", "as.factor(disgroup)", 
-                   "donorage", "donormale", "donorcmv", 
-                   "waittime", "as.factor(hospital)", "mtx")
+baseline_vars <- c("age", "maleCat", "cmvCat", "disgroupCat", 
+                   "donorage", "donormaleCat", "donorcmvCat", 
+                   "waittime", "hospitalCat", "mtxCat")
 
 univariate_results <- lapply(baseline_vars, function(var) {
     formula <- as.formula(paste("dfs_surv ~", var))
@@ -219,7 +220,7 @@ dfs_surv <- Surv(time = bmt$tdfs, event = bmt$deltadfs)
 relapse_surv <- Surv(time = bmt$tdfs, event = bmt$deltar)
 
 ## univariate Cox for disease-free survival
-cox_dfs_unadj <- coxph(dfs_surv ~ deltaa + age + as.factor(hospital) + male, data = bmt)
+cox_dfs_unadj <- coxph(dfs_surv ~ deltaa, data = bmt)
 dfs_summary <- tidy(cox_dfs_unadj, conf.int = TRUE, exponentiate = TRUE)
 dfs_summary
 
@@ -227,9 +228,9 @@ km_dfs <- survfit(dfs_surv ~ deltaa, data = bmt)
 
 ggsurvplot(km_dfs, conf.int = TRUE, pval = TRUE,
            xlab = "Time (days)", 
-           ylab = "Disease-Free Survival Probability",
+           ylab = "Disease-free Survival Probability",
            legend.labs = c("No aGVHD", "aGVHD"),
-           title = "DFS by aGVHD Status")
+           title = "Disease-free Survival by aGVHD Status")
 
 ## multivariable Cox for dfs
 cox_dfs_adj <- coxph(dfs_surv ~ deltaa + age + as.factor(hospital) + male, data = bmt)
@@ -263,9 +264,9 @@ bmt_agvhd <- subset(bmt, deltaa == 1)
 
 dfs_surv_agvhd <- Surv(time = bmt_agvhd$tdfs, event = bmt_agvhd$deltadfs)
 
-baseline_vars <- c("age", "male", "cmv", "as.factor(disgroup)", 
-                   "donorage", "donormale", "donorcmv", 
-                   "waittime", "as.factor(hospital)", "mtx")
+baseline_vars <- c("age", "maleCat", "cmvCat", "disgroupCat", 
+                   "donorage", "donormaleCat", "donorcmvCat", 
+                   "waittime", "hospitalCat", "mtxCat")
 
 uni_agvhd <- lapply(baseline_vars, function(var) {
     formula <- as.formula(paste("dfs_surv_agvhd ~", var))
@@ -294,7 +295,7 @@ ggsurvplot(km_agvhd, conf.int = TRUE, pval = TRUE,
            xlab = "Time to aGVHD (days)",
            ylab = "Cumulative Incidence of aGVHD",
            legend.labs = c("No Methotrexate", "Methotrexate"),
-           title = "Time to aGVHD by Methotrexate Use")
+           title = "Time to aGVHD by Prophylactice Methotrexate Use")
 
 ## univariate Cox
 cox_mtx <- coxph(agvhd_surv ~ mtx, data = bmt)
@@ -304,7 +305,7 @@ kable(univariate_mtx[, c("term", "estimate", "conf.low", "conf.high", "p.value")
       digits = 3, caption = "Univariate Cox Regression: Methotrexate and aGVHD Risk")
 
 ## multivariable Cox w/ confounders
-cox_adj <- coxph(agvhd_surv ~ mtx + age + male + as.factor(disgroup) + waittime + as.factor(hospital), data = bmt)
+cox_adj <- coxph(agvhd_surv ~ mtx + age + maleCat + disgroupCat + waittime + hospitalCat, data = bmt)
 multivariable_mtx <- tidy(cox_adj, conf.int = TRUE, exponentiate=TRUE)
 
 kable(multivariable_mtx[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
@@ -325,9 +326,9 @@ km_dfs <- survfit(dfs_surv ~ deltap, data = bmt)
 
 ggsurvplot(km_dfs, conf.int = TRUE, pval = TRUE,
            xlab = "Time (days)",
-           ylab = "Disease-Free Survival Probability",
+           ylab = "Disease-free Survival Probability",
            legend.labs = c("No Platelet Recovery", "Platelet Recovery"),
-           title = "DFS by Platelet Recovery")
+           title = "Disease-free Survival by Platelet Recovery")
 
 ## KM for relapse
 km_relapse <- survfit(relapse_surv ~ deltap, data = bmt)
@@ -340,6 +341,7 @@ ggsurvplot(km_relapse, conf.int = TRUE, pval = TRUE,
 
 ## univariate Cox for dfs
 cox_dfs <- coxph(dfs_surv ~ deltap, data = bmt)
+cox_dfs
 univariate_dfs <- tidy(cox_dfs, conf.int = TRUE, exponentiate=TRUE)
 
 kable(univariate_dfs[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
@@ -354,7 +356,7 @@ kable(multi_dfs[, c("term", "estimate", "conf.low", "conf.high", "p.value")],
 
 ## univariate Cox for relapse
 cox_relapse <- coxph(relapse_surv ~ deltap, data = bmt)
-univariate_relapse <- tidy(cox_relapse, conf.int = TRUE)
+univariate_relapse <- tidy(cox_relapse, conf.int = TRUE, exponentiate = TRUE)
 
 kable(univariate_relapse[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
       digits = 3, caption = "Univariate Cox: Platelet Recovery and Relapse Risk")
