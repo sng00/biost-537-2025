@@ -232,7 +232,7 @@ ggsurvplot(km_dfs, conf.int = TRUE, pval = TRUE,
            legend.labs = c("No aGVHD", "aGVHD"),
            title = "Disease-free Survival by aGVHD Status")
 
-## multivariable Cox for dfs
+## multivariate Cox for dfs
 cox_dfs_adj <- coxph(dfs_surv ~ deltaa + age + as.factor(hospital) + male, data = bmt)
 dfs_summary_adj <- tidy(cox_dfs_adj, conf.int = T, exponentiate = T)
 dfs_summary_adj
@@ -250,10 +250,42 @@ ggsurvplot(km_relapse, conf.int = TRUE, pval = TRUE,
            legend.labs = c("No aGVHD", "aGVHD"),
            title = "Relapse by aGVHD Status")
 
-## multivariable Cox for relapse
+## multivariate Cox for relapse
 cox_relapse_adj <- coxph(relapse_surv ~ deltaa + age + as.factor(hospital) + male, data = bmt)
 relapse_summary_adj <- tidy(cox_relapse_adj, conf.int = T, exponentiate = T)
 relapse_summary_adj
+
+###############################b
+
+# time-varying exposure added
+
+## univariate Cox for dfs
+tdata_dfs <- tmerge(data1 = bmt,
+             data2= bmt,
+             id = id,
+             event = event(tdfs, deltadfs),
+             agvhd_tv = tdc(ta))
+
+cox_dfstime <- coxph(Surv(tstart, tdfs, deltadfs) ~ agvhd_tv + cluster(id), data = tdata_dfs)
+summary(cox_dfstime)
+
+## multivariate Cox for dfs
+cox_dfstime_adj <- coxph(Surv(tstart, tdfs, deltadfs) ~ agvhd_tv + cluster(id) + age + maleCat + hospitalCat, data = tdata_dfs)
+summary(cox_dfstime_adj)
+
+## univariate Cox for relapse
+tdata_re <- tmerge(data1 = bmt,
+                   data2 = bmt,
+                   id = id,
+                   event = event(tdfs, deltar),
+                   agvhd_tv = tdc(ta))
+
+cox_retime <- coxph(Surv(tstart, tdfs, deltar) ~ agvhd_tv + cluster(id), data = tdata_re)
+summary(cox_retime)
+
+## multivariate Cox for relapse
+cox_retime_adj <- coxph(Surv(tstart, tdfs, deltar) ~ agvhd_tv + cluster(id) + age + maleCat + hospitalCat, data = tdata_re)
+summary(cox_retime_adj)
 ```
 
 
@@ -304,12 +336,12 @@ univariate_mtx <- tidy(cox_mtx, conf.int = TRUE, exponentiate=TRUE)
 kable(univariate_mtx[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
       digits = 3, caption = "Univariate Cox Regression: Methotrexate and aGVHD Risk")
 
-## multivariable Cox w/ confounders
+## multivariate Cox w/ confounders
 cox_adj <- coxph(agvhd_surv ~ mtx + age + maleCat + disgroupCat + waittime + hospitalCat, data = bmt)
-multivariable_mtx <- tidy(cox_adj, conf.int = TRUE, exponentiate=TRUE)
+multivariate_mtx <- tidy(cox_adj, conf.int = TRUE, exponentiate=TRUE)
 
-kable(multivariable_mtx[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
-      digits = 3, caption = "Multivariable Cox Regression: Methotrexate and aGVHD Risk")
+kable(multivariate_mtx[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
+      digits = 3, caption = "multivariate Cox Regression: Methotrexate and aGVHD Risk")
 
 
 ```
@@ -347,12 +379,12 @@ univariate_dfs <- tidy(cox_dfs, conf.int = TRUE, exponentiate=TRUE)
 kable(univariate_dfs[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
       digits = 3, caption = "Univariate Cox: Platelet Recovery and DFS")
 
-## multivariable Cox for dfs
+## multivariate Cox for dfs
 cox_dfs_adj <- coxph(dfs_surv ~ deltap + age + as.factor(hospital) + as.factor(disgroup) + male, data = bmt)
 multi_dfs <- tidy(cox_dfs_adj, conf.int = T, exponentiate = T)
 
 kable(multi_dfs[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
-      digits = 3, caption = "Multivariable Cox: Platelet Recovery and DFS")
+      digits = 3, caption = "multivariate Cox: Platelet Recovery and DFS")
 
 ## univariate Cox for relapse
 cox_relapse <- coxph(relapse_surv ~ deltap, data = bmt)
@@ -361,11 +393,11 @@ univariate_relapse <- tidy(cox_relapse, conf.int = TRUE, exponentiate = TRUE)
 kable(univariate_relapse[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
       digits = 3, caption = "Univariate Cox: Platelet Recovery and Relapse Risk")
 
-## multivariable Cox for relapse
-cox_relapse_adj <- coxph(relapse_surv ~ deltap + age + as.factor(hospital) + + as.factor(disgroup)+ male, data = bmt)
+## multivariate Cox for relapse
+cox_relapse_adj <- coxph(relapse_surv ~ deltap + age + as.factor(hospital) + as.factor(disgroup) + male, data = bmt)
 multi_relapse <- tidy(cox_relapse_adj, conf.int = T, exponentiate = T)
 
 kable(multi_relapse[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
-      digits = 3, caption = "Multivariable Cox: Platelet Recovery and DFS")
+      digits = 3, caption = "multivariate Cox: Platelet Recovery and DFS")
 
 ```
