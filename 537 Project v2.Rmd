@@ -1,10 +1,10 @@
 ---
-title: "BIOST/EPI 537 Final Group Project"
-author: "Geyue Li, Cecilia Martindale, Sarah Garcia"
+title: "BIOST 537 Final Group Project"
+author: "Cecilia Martindale, Sarah Garcia, Emily Li"
 date: "`r Sys.Date()`"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
   word_document: default
 editor_options:
   chunk_output_type: console
@@ -12,11 +12,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
 
-# 1. Provide an estimate of disease-free survival time for patients enrolled in this study. What are the main characteristics of this summary?
-
-```{r}
 library(survival)
 library(survminer)
 library(ggplot2)
@@ -28,8 +24,13 @@ library(kableExtra)
 
 #bmt <- read.csv("~/Documents/UW classes/survival analysis/bmt.csv")
 bmt <- read.csv("~/Downloads/bmt.csv")
+```
 
+# 1. Provide an estimate of disease-free survival time for patients enrolled in this study. What are the main characteristics of this summary?
+
+```{r}
 dfs_surv <- Surv(time = bmt$tdfs, event = bmt$deltadfs)
+
 km_fit <- survfit(dfs_surv ~ 1)
 
 survminer::ggsurvplot(
@@ -50,7 +51,6 @@ summary(km_fit)
 ```{r}
 baseline_vars <- c("age",  "donorage", "waittime")
 cat_vars <- c("male","cmv", "donormale", "donorcmv", "mtx")
-# do hospital on its own since it is 4 categories
 
 group_summary <- bmt %>%
   group_by(disgroup) %>%
@@ -115,7 +115,6 @@ fisher.test(table_hospital_fab)
 table_mtx_fab <- table(bmt$mtx, bmt$fab)
 chisq.test(table_mtx_fab)
 
-# table 1 by disease or FAB classification
 bmt <- bmt %>%
   mutate(disgroupCat = factor(disgroup,
                               levels = c(1, 2, 3),
@@ -184,7 +183,6 @@ fab_tab1 <- table1(~ deltarCat + deltadfsCat + deltaaCat + deltasCat + deltapCat
                    data = bmt,
                    caption = "Baseline Descriptive Statistics by FAB Classification")
 fab_tab1
-
 ```
 
 # 3. Are any of the measured baseline variables associated with differences in disease-free survival?
@@ -209,85 +207,41 @@ colnames(univariate_results)
 univariate_results <- univariate_results[, c("variable", "term", "estimate", "conf.low", "conf.high", "p.value")]
 
 kable(univariate_results, digits = 3, caption = "Univariate Cox Regression Results for Disease-Free Survival")
-
 ```
 
 # 4. It is generally thought that aGVHD has an anti-leukemic effect. Based on the available data, is occurrence of aGVHD after transplantation associated with improved disease-free survival? Is it associated with a decreased risk of relapse? In view of this, do you consider aGVHD as an important prognostic event?
 
 ```{r}
-dfs_surv <- Surv(time = bmt$tdfs, event = bmt$deltadfs)
-
-relapse_surv <- Surv(time = bmt$tdfs, event = bmt$deltar)
-
-## univariate Cox for disease-free survival
-cox_dfs_unadj <- coxph(dfs_surv ~ deltaa, data = bmt)
-dfs_summary <- tidy(cox_dfs_unadj, conf.int = TRUE, exponentiate = TRUE)
-dfs_summary
-
-km_dfs <- survfit(dfs_surv ~ deltaa, data = bmt)
-
-ggsurvplot(km_dfs, conf.int = TRUE, pval = TRUE,
-           xlab = "Time (days)", 
-           ylab = "Disease-free Survival Probability",
-           legend.labs = c("No aGVHD", "aGVHD"),
-           title = "Disease-free Survival by aGVHD Status")
-
-## multivariate Cox for dfs
-cox_dfs_adj <- coxph(dfs_surv ~ deltaa + age + as.factor(hospital) + male, data = bmt)
-dfs_summary_adj <- tidy(cox_dfs_adj, conf.int = T, exponentiate = T)
-dfs_summary_adj
-
-## univariate Cox for relapse
-cox_relapse_unadj <- coxph(relapse_surv ~ deltaa, data = bmt)
-relapse_summary <- tidy(cox_relapse_unadj, conf.int = TRUE, exponentiate=TRUE)
-relapse_summary
-
-km_relapse <- survfit(relapse_surv ~ deltaa, data = bmt)
-
-ggsurvplot(km_relapse, conf.int = TRUE, pval = TRUE,
-           xlab = "Time (days)", 
-           ylab = "Cumulative Relapse Probability",
-           legend.labs = c("No aGVHD", "aGVHD"),
-           title = "Relapse by aGVHD Status")
-
-## multivariate Cox for relapse
-cox_relapse_adj <- coxph(relapse_surv ~ deltaa + age + as.factor(hospital) + male, data = bmt)
-relapse_summary_adj <- tidy(cox_relapse_adj, conf.int = T, exponentiate = T)
-relapse_summary_adj
-
-###############################b
-
-# time-varying exposure added
-
-## univariate Cox for dfs
+## add time-varying deltaa for dfs
 tdata_dfs <- tmerge(data1 = bmt,
              data2= bmt,
              id = id,
              event = event(tdfs, deltadfs),
              agvhd_tv = tdc(ta))
 
+## univariate Cox for dfs with time-varying deltaa
 cox_dfstime <- coxph(Surv(tstart, tdfs, deltadfs) ~ agvhd_tv + cluster(id), data = tdata_dfs)
 summary(cox_dfstime)
 
-## multivariate Cox for dfs
+## multivariate Cox for dfs with time-varying deltaa
 cox_dfstime_adj <- coxph(Surv(tstart, tdfs, deltadfs) ~ agvhd_tv + cluster(id) + age + maleCat + hospitalCat, data = tdata_dfs)
 summary(cox_dfstime_adj)
 
-## univariate Cox for relapse
+## add time-varying deltaa for relapse
 tdata_re <- tmerge(data1 = bmt,
                    data2 = bmt,
                    id = id,
                    event = event(tdfs, deltar),
                    agvhd_tv = tdc(ta))
 
+## univariate Cox for relapse with time-varying deltaa
 cox_retime <- coxph(Surv(tstart, tdfs, deltar) ~ agvhd_tv + cluster(id), data = tdata_re)
 summary(cox_retime)
 
-## multivariate Cox for relapse
+## multivariate Cox for relapse with time-varying deltaa
 cox_retime_adj <- coxph(Surv(tstart, tdfs, deltar) ~ agvhd_tv + cluster(id) + age + maleCat + hospitalCat, data = tdata_re)
 summary(cox_retime_adj)
 ```
-
 
 # 5. Among the patients who develop aGVHD, are any of the measured baseline factors associated with differences in disease-free survival?
 
@@ -312,7 +266,6 @@ uni_agvhd <- do.call(rbind, uni_agvhd)
 
 uni_agvhd <- uni_agvhd[, c("variable", "term", "estimate", "conf.low", "conf.high", "p.value")]
 kable(uni_agvhd, digits = 3, caption = "Univariate Cox Regression Results for DFS (aGVHD Patients Only)")
-
 ```
 
 # 6. Is prophylactic use of methotrexate associated with an increased or decreased risk of developing aGVHD? Provide an estimate of the survival function of time from transplant until onset of aGVHD separately for patients either administered methotrexate or not. In doing so, consider the importance of accounting for relevant confounding factors.
@@ -342,15 +295,12 @@ multivariate_mtx <- tidy(cox_adj, conf.int = TRUE, exponentiate=TRUE)
 
 kable(multivariate_mtx[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
       digits = 3, caption = "multivariate Cox Regression: Methotrexate and aGVHD Risk")
-
-
 ```
 
 # 7. Based on the available data, is recovery of normal platelet levels associated with improved disease- free survival? Is it associated with a decreased risk of relapse?
 
 ```{r}
 dfs_surv <- Surv(time = bmt$tdfs, event = bmt$deltadfs)
-
 relapse_surv <- Surv(time = bmt$tdfs, event = bmt$deltar)
 
 ## KM for dfs
@@ -371,33 +321,34 @@ ggsurvplot(km_relapse, conf.int = TRUE, pval = TRUE,
            legend.labs = c("No Platelet Recovery", "Platelet Recovery"),
            title = "Relapse by Platelet Recovery")
 
-## univariate Cox for dfs
-cox_dfs <- coxph(dfs_surv ~ deltap, data = bmt)
-cox_dfs
-univariate_dfs <- tidy(cox_dfs, conf.int = TRUE, exponentiate=TRUE)
+## add time-varying deltap for dfs
+tdata_dfs <- tmerge(data1 = bmt,
+             data2= bmt,
+             id = id,
+             event = event(tdfs, deltadfs),
+             deltap_tv = tdc(tp))
 
-kable(univariate_dfs[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
-      digits = 3, caption = "Univariate Cox: Platelet Recovery and DFS")
+## univariate Cox for dfs with time-varying deltap
+cox_dfstime <- coxph(Surv(tstart, tdfs, deltadfs) ~ deltap_tv + cluster(id), data = tdata_dfs)
+summary(cox_dfstime)
 
-## multivariate Cox for dfs
-cox_dfs_adj <- coxph(dfs_surv ~ deltap + age + as.factor(hospital) + as.factor(disgroup) + male, data = bmt)
-multi_dfs <- tidy(cox_dfs_adj, conf.int = T, exponentiate = T)
+## multivariate Cox for dfs with time-varying deltap
+cox_dfstime_adj <- coxph(Surv(tstart, tdfs, deltadfs) ~ deltap_tv + cluster(id) + age + maleCat + hospitalCat, data = tdata_dfs)
+summary(cox_dfstime_adj)
 
-kable(multi_dfs[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
-      digits = 3, caption = "multivariate Cox: Platelet Recovery and DFS")
+## add time-varying deltap for relapse
+tdata_re <- tmerge(data1 = bmt,
+             data2= bmt,
+             id = id,
+             event = event(tdfs, deltar),
+             deltap_tv = tdc(tp))
 
-## univariate Cox for relapse
-cox_relapse <- coxph(relapse_surv ~ deltap, data = bmt)
-univariate_relapse <- tidy(cox_relapse, conf.int = TRUE, exponentiate = TRUE)
+## univariate Cox for relapse with time-varying deltap
+cox_retime <- coxph(Surv(tstart, tdfs, deltar) ~ deltap_tv + cluster(id), data = tdata_re)
+summary(cox_retime)
 
-kable(univariate_relapse[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
-      digits = 3, caption = "Univariate Cox: Platelet Recovery and Relapse Risk")
-
-## multivariate Cox for relapse
-cox_relapse_adj <- coxph(relapse_surv ~ deltap + age + as.factor(hospital) + as.factor(disgroup) + male, data = bmt)
-multi_relapse <- tidy(cox_relapse_adj, conf.int = T, exponentiate = T)
-
-kable(multi_relapse[, c("term", "estimate", "conf.low", "conf.high", "p.value")], 
-      digits = 3, caption = "multivariate Cox: Platelet Recovery and DFS")
-
+## multivariate Cox for relapse with time-varying deltap
+cox_retime_adj <- coxph(Surv(tstart, tdfs, deltar) ~ deltap_tv + cluster(id) + age + maleCat + hospitalCat, data = tdata_re)
+summary(cox_retime_adj)
 ```
+
